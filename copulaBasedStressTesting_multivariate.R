@@ -112,20 +112,28 @@ selectedCopula
 
 #Fit copula
 
-cop <- tCopula(dim = dim(allData)[2])
+cop <- claytonCopula(dim = dim(allData)[2])
 pseudoObs <- pobs(allData)
 fit <- fitCopula(cop, pseudoObs, method='ml')
 coef(fit)
 
-rho <- coef(fit)[1]
-df <- coef(fit)[2]
+#For Clayton coula
+claytonParam <- coef(fit)[1]
+
+#For t-copula
+# rho <- coef(fit)[1]
+# df <- coef(fit)[2]
 
 #Plot copula density (for kicks) (2D only)
-persp(tCopula(dim = 2,rho,df=df),dCopula)
+# persp(tCopula(dim = 2,rho,df=df),dCopula)
+
+persp(claytonCopula(dim = dim(allData)[2], param = claytonParam), dCopula)
+
 
 #Build copula
+u <- rCopula(3965, claytonCopula(dim = dim(allData)[2], param = claytonParam))
 
-u <- rCopula(3965, tCopula(dim = dim(allData)[2],rho,df=df))
+# u <- rCopula(3965, tCopula(dim = dim(allData)[2],rho,df=df))
 plot(u[,1],u[,2],pch='.',col='blue') # (2D only)
 cor(u,method='spearman') #Should be close to origCorr
 
@@ -175,14 +183,17 @@ for(index in 1:(dim(allData)[2]))
 }
 
 
-copula_dist <- mvdc(copula=tCopula(rho , dim = dim(allData)[2] , df=df), margins = marginalsList,
+# copula_dist <- mvdc(copula=tCopula(rho , dim = dim(allData)[2] , df=df), margins = marginalsList,
+#                     paramMargins=paramMarginsList )
+
+copula_dist <- mvdc(copula = claytonCopula(dim = dim(allData)[2], param = claytonParam), margins = marginalsList,
                     paramMargins=paramMarginsList )
 sim <- rMvdc(1000, copula_dist)
 
 #Visualize final fit (2D only)
 
 plot(standardizedAllData[,1],standardizedAllData[,2],main='Returns')
-points(sim[,1],sim[,2],col='red')
+points(sim[,1],sim[,3],col='red')
 legend('bottomright',c('Observed','Simulated'),col=c('black','red'),pch=21)
 
 
