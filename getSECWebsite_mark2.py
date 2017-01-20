@@ -1,3 +1,7 @@
+'''
+This code takes a ticker, pulls down all 10-Ks available from the SEC Edgar database, and writes the contents of those 10-Ks to textfiles
+'''
+
 from pprint import pprint
 import requests
 from bs4 import BeautifulSoup
@@ -167,7 +171,7 @@ dictOf10KTexts = {}
 
 for year in allYears:
 	print(year)
-	outfile = open(ticker + '_10K_' + year + 'out.txt', 'w')
+	outfile = open(ticker + '_10K_' + year + '.txt', 'w')
 
 
 	thisYear10KURL = dictOf10KHtmURLs[year]
