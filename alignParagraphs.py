@@ -1,4 +1,8 @@
 '''
+This code provides a simple example of matching sentences across 10-Ks
+------------------------------------------------------------------------
+
+
 YOU NEED TO INSTALL SPACY: see https://spacy.io/docs/usage/
 
 All you need to do is type these two commands into terminal:
