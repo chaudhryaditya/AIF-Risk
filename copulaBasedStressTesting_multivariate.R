@@ -47,12 +47,12 @@ getPercentChanges <- function(symbol)
 getBestTDistDegreesOfFreedom <- function(vectorOfValues)
 {
   vectorOfValues = scale(vectorOfValues)#(vectorOfValues - mean(vectorOfValues)) / sd(vectorOfValues)
- 
+  
   result = fitdistr(vectorOfValues, "t")
   bestDegreesOfFreedom = result$estimate[3]
-
+  
   return (bestDegreesOfFreedom)
-    
+  
   
 }
 
@@ -91,16 +91,52 @@ inverseCDF <- function(pdfVector, pdfXValues,  totalArea)
   
 }
 #Get all data
-SPX = getPercentChanges('^GSPC')
-SAVE = getPercentChanges('SAVE')
+
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+portfolioPrices = read.csv("portfolioPrices.csv")
+portfolioPrices = portfolioPrices[complete.cases(portfolioPrices), ]
+portfolioPrices = portfolioPrices[order( as.Date(portfolioPrices[,1], format = "%m/%d/%Y") ),  ]
+
+betterDates <- as.Date(portfolioPrices$Date, "%m/%d/%y")
+
+rownames(portfolioPrices) <- betterDates
+
+portfolioPrices = subset(portfolioPrices, ,2)
+
+
+portfolioChanges = data.frame(diff(as.matrix(portfolioPrices)))/portfolioPrices[-nrow(portfolioPrices),]
+
+
+portfolioChanges = as.xts(portfolioChanges)
+
+
+HYZD = getPercentChanges('HYZD')
+SAVE = getPercentChanges('SAVE') 
+SKX = getPercentChanges('SKX') 
+
+
+GSPC = getPercentChanges('^GSPC') #oil etf
 USO = getPercentChanges('USO') #oil etf
 XLY = getPercentChanges('XLY') #consumer discretionary etf
+UUP = getPercentChanges('UUP') #interest rates etf
 
 
-allData = as.matrix(cbind(SPX, XLY, USO))
+# Need to do this if using the read in portoflio prices
+indexClass(USO) <- "Date"
+index(USO) <- strptime(index(USO), "%Y-%m-%d")
+indexClass(XLY) <- "Date"
+index(XLY) <- strptime(index(XLY), "%Y-%m-%d")
+indexClassUUP <- "Date"
+index(UUP) <- strptime(index(UUP), "%Y-%m-%d")
+indexClassGSPC<- "Date"
+index(GSPC) <- strptime(index(GSPC), "%Y-%m-%d")
+
+allData = as.matrix(cbind(portfolioChanges, GSPC))
 allData = allData[complete.cases(allData),]
-namesList = c('^GSPC' , 'XLY', "USO")
+namesList = c('Portfolio' , "GSPC")
 
+vectorOfConditionalValues = c(0, -.05)
 
 origCorr = cor(allData)
 
@@ -119,6 +155,7 @@ coef(fit)
 
 #For Clayton coula
 claytonParam <- coef(fit)[1]
+
 
 #For t-copula
 # rho <- coef(fit)[1]
@@ -193,7 +230,7 @@ sim <- rMvdc(1000, copula_dist)
 #Visualize final fit (2D only)
 
 plot(standardizedAllData[,1],standardizedAllData[,2],main='Returns')
-points(sim[,1],sim[,3],col='red')
+points(sim[,1],sim[,2],col='red')
 legend('bottomright',c('Observed','Simulated'),col=c('black','red'),pch=21)
 
 
@@ -232,7 +269,7 @@ persp3D(xVals, yVals, densities, phi = 30, theta = 30, ticktype = "detailed",
 
 
 #3D conditional distribution
-conditionalValue = -.05
+conditionalValue = vectorOfConditionalValues[2]
 newYVals = yVals
 for(index in 1:length(yVals))
 {
@@ -244,7 +281,6 @@ image3D(newXVals, conditionalValue, z = range(0, .1, .01), add = TRUE, col = 're
 
 #Plot conditional distribution
 
-vectorOfConditionalValues = c(0, -.05, -.05)
 standardizedConditionalValues = (vectorOfConditionalValues - means) / stdDevs
 
 
@@ -268,6 +304,21 @@ lines(conditionalXValues , conditionalDist ,col='red',lwd=2)
 
 unconditionalVaR = inverseCDF(portfolio.hist$counts, portfolio.hist$mids,  .95)
 conditionalVaR = inverseCDF(conditionalDist, conditionalXValues,  .95)
+
+simulatedPortfolioValue = matrix(1, nrow = 1000)
+for(day in 1:30)
+{
+  #randomChanges =   sample(x= portfolio.hist$mids, size=1000, replace=TRUE, prob=portfolio.hist$counts)
+  randomChanges = sample(x= seq(-4, 4, .1), size=1000, replace=TRUE, prob=dt(seq(-4, 4, .1), listOfDegreesOfFreedom[1])) * stdDevs[1] + means[1]
+  simulatedPortfolioValue = simulatedPortfolioValue * ( 1 + randomChanges)
+  print(day)
+  
+}
+
+
+monthlyVaR = sort(simulatedPortfolioValue)[1000 * .05]
+monthlyVaR - 1
+
 
 #Put portfolio through 2008
 
@@ -304,16 +355,14 @@ for (index in 1:length(stressFactors))
   
   portfolio.hist <- hist(allData[,1], plot=FALSE, breaks = length(conditionalXValues))
   portfolio.hist$counts <- portfolio.hist$counts/sum(portfolio.hist$counts)
-
+  
   randomChanges = sample(conditionalXValues, size = 1000, prob = conditionalDist)
   portfolioValue = portfolioValue * ( 1 + randomChanges)
   print(index)
-
+  
 }
 
 stressTestVaR = sort(portfolioValue)[1000 * .05]
-stressTestVaR
-hist(portfolioValue, breaks = 100, xlim = c(0, max(portfolioValue)), col = 'cyan', density = 30)
+stressTestVaR - 1
+hist(sort(portfolioValue)[0:950], breaks = 100, xlim = c(0, max(sort(portfolioValue)[0:950])), col = 'cyan', density = 30)
 abline(v = stressTestVaR, col = 'red', lwd = 2)
-
-
