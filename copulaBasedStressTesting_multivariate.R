@@ -132,7 +132,7 @@ index(UUP) <- strptime(index(UUP), "%Y-%m-%d")
 indexClassGSPC<- "Date"
 index(GSPC) <- strptime(index(GSPC), "%Y-%m-%d")
 
-allData = as.matrix(cbind(portfolioChanges, GSPC))
+allData = as.matrix(cbind(portfolioChanges, GSPC, UUP))
 allData = allData[complete.cases(allData),]
 namesList = c('Portfolio' , "GSPC")
 
