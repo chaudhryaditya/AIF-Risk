@@ -109,34 +109,46 @@ portfolioChanges = data.frame(diff(as.matrix(portfolioPrices)))/portfolioPrices[
 
 
 portfolioChanges = as.xts(portfolioChanges)
-
+# 
+# VIX = getPercentChanges('^VIX')
+# 
+# 
+# allData = getSymbols.yahoo('^VIX', auto.assign=FALSE)
+# 
+# 
+# 
+# relevantColumn = names(allData)[length(names(allData))]
+# values = allData[,relevantColumn]
+# values = values[paste(2012, '::')]
+# 
+# mean(values)
 
 HYZD = getPercentChanges('HYZD')
 SAVE = getPercentChanges('SAVE') 
-SKX = getPercentChanges('SKX') 
+HYGH = getPercentChanges('HYGH') 
 
 
 GSPC = getPercentChanges('^GSPC') #oil etf
 USO = getPercentChanges('USO') #oil etf
 XLY = getPercentChanges('XLY') #consumer discretionary etf
-UUP = getPercentChanges('UUP') #interest rates etf
+VIX = getPercentChanges('VIX') #interest rates etf
 
 
 # Need to do this if using the read in portoflio prices
-indexClass(USO) <- "Date"
-index(USO) <- strptime(index(USO), "%Y-%m-%d")
-indexClass(XLY) <- "Date"
-index(XLY) <- strptime(index(XLY), "%Y-%m-%d")
-indexClassUUP <- "Date"
-index(UUP) <- strptime(index(UUP), "%Y-%m-%d")
-indexClassGSPC<- "Date"
-index(GSPC) <- strptime(index(GSPC), "%Y-%m-%d")
+# indexClass(USO) <- "Date"
+# index(USO) <- strptime(index(USO), "%Y-%m-%d")
+# indexClass(XLY) <- "Date"
+# index(XLY) <- strptime(index(XLY), "%Y-%m-%d")
+# indexClassUUP <- "Date"
+# index(UUP) <- strptime(index(UUP), "%Y-%m-%d")
+# indexClassGSPC<- "Date"
+# index(GSPC) <- strptime(index(GSPC), "%Y-%m-%d")
 
-allData = as.matrix(cbind(portfolioChanges, GSPC, UUP))
+allData = as.matrix(cbind(HYZD, VIX, GSPC))
 allData = allData[complete.cases(allData),]
-namesList = c('Portfolio' , "GSPC")
+namesList = c('HYZD' , "VIX", "GSPC")
 
-vectorOfConditionalValues = c(0, -.05)
+vectorOfConditionalValues = c(0, .2, -.02)
 
 origCorr = cor(allData)
 
@@ -186,6 +198,16 @@ for( index in 1 : length(listOfDegreesOfFreedom))
   
 }
 
+#########################################################################################################
+# WHAT IS GOING ON HERE - IGNORE FOR NOW
+#########################################################################################################
+# index = 1 #scale(allData[,index])#
+# vectorOfValues = (as.matrix(allData[,index]) - mean(as.matrix(allData[,index]))) / sd(as.matrix(allData[,index]))
+# vectorOfValues = as.matrix(coredata(vectorOfValues))
+# result = fitdistr(vectorOfValues, "t")
+# bestDegreesOfFreedom = result$estimate[3]
+#########################################################################################################
+
 standardizedAllData = scale(allData)
 
 #Visualize fit
@@ -201,7 +223,7 @@ for( index in 1 : length(listOfDegreesOfFreedom))
 paramList = list()
 for( index in 1 : length(listOfDegreesOfFreedom))
 {
-  paramList = list(paramList, list(df = listOfDegreesOfFreedom[index]))
+  paramList[index] = listOfDegreesOfFreedom[index] 
   
 }
 
@@ -237,48 +259,51 @@ legend('bottomright',c('Observed','Simulated'),col=c('black','red'),pch=21)
 
 #3D Dist plot (CAN ONLY DO FOR 2 VARIABLES)
 
-indexOfFirstVariable = 1
-indexOfSecondVariable = 2
-
-
-xVals = seq(min(standardizedAllData[,indexOfFirstVariable]), max(standardizedAllData[,indexOfFirstVariable]), (max(standardizedAllData[,indexOfFirstVariable]) - min(standardizedAllData[,indexOfFirstVariable])) / 50)
-yVals = seq(min(standardizedAllData[,indexOfSecondVariable]), max(standardizedAllData[,indexOfSecondVariable]), (max(standardizedAllData[,indexOfSecondVariable]) - min(standardizedAllData[,indexOfSecondVariable])) / 50)
-
-
-densities = matrix(0 , nrow = length(xVals), ncol = length(yVals))
-
-for (xIndex in 1:length(xVals))
+if (dim(allData)[2] == 2)
 {
-  for(yIndex in 1:length(yVals))
+  
+  indexOfFirstVariable = 1
+  indexOfSecondVariable = 2
+  
+  
+  xVals = seq(min(standardizedAllData[,indexOfFirstVariable]), max(standardizedAllData[,indexOfFirstVariable]), (max(standardizedAllData[,indexOfFirstVariable]) - min(standardizedAllData[,indexOfFirstVariable])) / 50)
+  yVals = seq(min(standardizedAllData[,indexOfSecondVariable]), max(standardizedAllData[,indexOfSecondVariable]), (max(standardizedAllData[,indexOfSecondVariable]) - min(standardizedAllData[,indexOfSecondVariable])) / 50)
+  
+  
+  densities = matrix(0 , nrow = length(xVals), ncol = length(yVals))
+  
+  for (xIndex in 1:length(xVals))
   {
-    xVal = xVals[xIndex]
-    yVal = yVals[yIndex]
+    for(yIndex in 1:length(yVals))
+    {
+      xVal = xVals[xIndex]
+      yVal = yVals[yIndex]
+      
+      densities[xIndex, yIndex] =  dMvdc(c(xVal, yVal), copula_dist, log = FALSE)
+    }
     
-    densities[xIndex, yIndex] =  dMvdc(c(xVal, yVal), copula_dist, log = FALSE)
   }
   
+  xVals = xVals * stdDevs[1] + means[1]
+  yVals = yVals * stdDevs[2] + means[2]
+  
+  persp3D(xVals, yVals, densities, phi = 30, theta = 30, ticktype = "detailed",
+          xlab = paste("\n", namesList[1]), ylab = paste("\n", namesList[2]), zlab = "\n\nProbability",
+          facets = FALSE, plot = FALSE)
+  
+  
+  
+  #3D conditional distribution
+  conditionalValue = vectorOfConditionalValues[2]
+  newYVals = yVals
+  for(index in 1:length(yVals))
+  {
+    newYVals[index] = conditionalValue
+  }
+  newXVals = xVals
+  zVals = .1#matrix(.1, ncol = 2,  nrow = length(yVals))[,1]
+  image3D(newXVals, conditionalValue, z = range(0, .1, .01), add = TRUE, col = 'red', facets = TRUE, plot = TRUE, alpha = .5)
 }
-
-xVals = xVals * stdDevs[1] + means[1]
-yVals = yVals * stdDevs[2] + means[2]
-
-persp3D(xVals, yVals, densities, phi = 30, theta = 30, ticktype = "detailed",
-        xlab = paste("\n", namesList[1]), ylab = paste("\n", namesList[2]), zlab = "\n\nProbability",
-        facets = FALSE, plot = FALSE)
-
-
-
-#3D conditional distribution
-conditionalValue = vectorOfConditionalValues[2]
-newYVals = yVals
-for(index in 1:length(yVals))
-{
-  newYVals[index] = conditionalValue
-}
-newXVals = xVals
-zVals = .1#matrix(.1, ncol = 2,  nrow = length(yVals))[,1]
-image3D(newXVals, conditionalValue, z = range(0, .1, .01), add = TRUE, col = 'red', facets = TRUE, plot = TRUE, alpha = .5)
-
 #Plot conditional distribution
 
 standardizedConditionalValues = (vectorOfConditionalValues - means) / stdDevs
