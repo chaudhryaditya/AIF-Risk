@@ -28,7 +28,7 @@ import math
 
 import ystockquote
 import collections 
-
+import pandas_datareader as pdr
 
 def ffRegress(full_df, startDateInt, endDateInt):  #Dates in int form as YYYYMMDD
 
@@ -85,8 +85,10 @@ def constructSP500(full_df):
 	datetimeobject = datetime.strptime(end_date_FF_format,'%Y%m%d')
 	end_date_ystockquote_format = datetimeobject.strftime('%Y-%m-%d')
 
+	print(start_date_ystockquote_format)
+	print(end_date_ystockquote_format)
 
-	sp500_df = get_price_history('^GSPC', start_date_ystockquote_format, end_date_ystockquote_format)
+	sp500_df = pdr.DataReader( 'SPY', 'google') #get_price_history('^GSPC', start_date_ystockquote_format, end_date_ystockquote_format)
 
 	full_df.loc[full_df.index[0], '^GSPC'] = 0
 
@@ -104,8 +106,9 @@ def constructSP500(full_df):
 
 		# sp500OnThisDate = sp500_df[date_ystockquote_format]
 
-
-		sp500OnThisDate = sp500_df.loc[date_ystockquote_format, 'Adj Close']
+		print(date_ystockquote_format)
+		print(sp500_df.index)
+		sp500OnThisDate = sp500_df.loc[date_ystockquote_format, 'Close']
 
 		full_df.loc[full_df.index[dateIndex], '^GSPC'] = sp500OnThisDate
 
@@ -343,9 +346,9 @@ def main():
 
 	
 	# Read in portfolio data
-	nav_df = pd.read_csv('Portfolio Data_031317.csv', header = 0)#, names = column_names)
+	nav_df = pd.read_csv('Portfolio Data_081417.csv', header = 0)#, names = column_names)
 
-	nav_df_invested_cap = pd.read_csv('Invested Capital_031317.csv', header = 0)#, names = column_names)
+	nav_df_invested_cap = pd.read_csv('Invested Capital_081417.csv', header = 0)#, names = column_names)
 
 	navList = [nav_df, nav_df_invested_cap]
 
